@@ -1,7 +1,6 @@
-import { createSlice ,createAsyncThunk} from "@reduxjs/toolkit"
+import { createAsyncThunk, createSlice } from "@reduxjs/toolkit"
 import ForecastDataState from "../../Interfaces/ForecastDataState";
-import axiosInstance from "../../Config/axiosInstance";
-
+import axiosInstance from '../../Config/axiosInstance';
 const initialState : ForecastDataState = {
     status: 'default',
     data: {
@@ -29,28 +28,25 @@ const initialState : ForecastDataState = {
     },
 }
 
-
-export const fetchData = createAsyncThunk('data/fetchdata', async () => {
+export const fetchData = createAsyncThunk('data/fetchdata', async (city: string) => {
     try {
-        const response = await axiosInstance.get(`forecast.json?key=${import.meta.env.VITE_API_KEY}&days=7&aqi=yes&q=Ahmedabad`);
-        console.log(response);
+        const response = await axiosInstance.get(`forecast.json?key=${import.meta.env.VITE_API_KEY}&days=7&aqi=yes&q=${city}`);
         return response;
     } catch(error) {
         console.log(error);
     }
 });
 
-
 const forecastSlice = createSlice({
     name: 'forecast',
     initialState,
-    reducers: {},
+    reducers: {
+    },
     extraReducers: (builder) => {
         builder.addCase(fetchData.fulfilled, (state, action) => {
             if(!action.payload) return;
             state.status = 'success';
-            console.log("action", action);
-            const {location, forecast} = action.payload.data;
+            const {location, forecast, current} = action.payload.data;
 
             // setting location
             state.data.location.country = location?.country;
@@ -66,11 +62,29 @@ const forecastSlice = createSlice({
                     condition: foreCastItem.day.condition.text,
                 }
             });
+
+
+            // setting currentData
+
+            state.data.currentData.uv = current.uv;
+            state.data.currentData.wind_kmph = current.wind_kph;
+            state.data.currentData.humidity = current.humidity;
+            state.data.currentData.vis_km = current.vis_km;
+            state.data.currentData.aqi = current.air_quality.pm2_5;
+            state.data.currentData.temp_c = current.temp_c;
+            state.data.currentData.temp_f = current.temp_f;
+            state.data.currentData.is_day = current.is_day;
+            state.data.currentData.condition = current.condition.text;
+            state.data.currentData.sunrise = forecast.forecastday[0].astro.sunrise;
+            state.data.currentData.sunset = forecast.forecastday[0].astro.sunset;
+            state.data.currentData.chance_of_rain = forecast.forecastday[0].day.daily_chance_of_rain;
+            
         })
         .addCase(fetchData.pending, (state) => {
             state.status = 'loading';
         })
     }
 });
+
 
 export default forecastSlice.reducer;
